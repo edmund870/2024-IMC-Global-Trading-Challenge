@@ -286,7 +286,7 @@ class Trader:
     ) -> str:
         fv_threshold = 180 if trade_product == 'ROSES' else -28
         trade_at = fv_threshold
-        close_at = fv_threshold * 0.75
+        close_at = fv_threshold * 0.5
         product = ['ROSES', 'CHOCOLATE']
         product_mids = {}
         worst_bid_dict = {}
