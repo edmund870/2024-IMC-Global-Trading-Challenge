@@ -203,16 +203,17 @@ class Trader:
        ############################
        ### Conversion Handling ####
        ############################
+       mid_price = (best_ask + best_bid) / 2
        south_buy_price = conv_ask + transport_fees + import_tariff # when buying, we pay transport and receive import tariff (-ve)
        south_sell_price = conv_bid - transport_fees - export_tariff # when selling, we pay transport and export 
         
        conversion = 0
        # if i am long, convert if archipalego sell price less cost of storage (holding for one more period) <= south sell price
-       if pos > 0 and best_bid - storage <= south_sell_price: 
+       if pos > 0 and best_bid - storage <= mid_price + 1: 
            conversion = -pos
 
        # if short i can convert at the bid of the south
-       if pos < 0 and south_buy_price < best_ask: 
+       if pos < 0 and south_buy_price < mid_price - 1: 
            conversion = -pos
 
        ##############################
@@ -222,6 +223,18 @@ class Trader:
        bid_spike = best_bid > prev_mid_price
        ask_spike = best_ask < prev_mid_price
        price_spread = (best_ask - best_bid) / 2
+       humidity_maxima = False
+       humidity_minima = False
+    
+       if len(humidity) >= 10:
+            left = np.diff(humidity[ : 4])
+            right = np.diff(humidity[-4 : ])
+            left_up = np.where(left >= 0, 1, 0).sum() == 4
+            right_up = np.where(right >= 0, 1, 0).sum() == 4
+            left_down = np.where(left <= 0, 1, 0).sum() == 4
+            right_down = np.where(right <= 0, 1, 0).sum() == 4
+            humidity_maxima = left_up and right_down
+            humidity_minima = right_up and left_down
 
        # when MM, i want to quote ask as close to curr mid price so i get filled (go short) and can convert to gain the import tariff (buying from south)
        ask_spread_adj = int(min(price_spread, abs(south_sell_price - (best_ask - storage))) + 2) 
@@ -229,9 +242,9 @@ class Trader:
        # when MM, i want to quote bid as close to curr mid price so i get filled and can convert to earn spread between south buy
        bid_spread_adj = int(abs(south_buy_price - best_bid) + 3)
 
-       if best_ask + storage < south_sell_price:
+       if best_ask + storage < south_sell_price or humidity_minima:
            cond = 'buy' 
-       elif best_bid > south_buy_price:
+       elif best_bid > south_buy_price or humidity_maxima:
            cond = 'sell'
        else: 
            cond = 'do nth'
@@ -261,66 +274,55 @@ class Trader:
             worst_bid_dict[prod] = worst_bid
             worst_ask_dict[prod] = worst_ask
 
-        component_basket = 4 * product_mids['CHOCOLATE'] + 6 * product_mids['STRAWBERRIES'] + product_mids['ROSES']
-        fv = product_mids['GIFT_BASKET'] - component_basket - 387 - 75 / 2
+        if trade_product in ['GIFT_BASKET']:
+            component_basket = 4 * product_mids['CHOCOLATE'] + 6 * product_mids['STRAWBERRIES'] + product_mids['ROSES']
+            z_score = 0.68 # 75th percentile
+            mu, std = 379.4904833333333, 76.42438217375009
+            x = product_mids['GIFT_BASKET'] - component_basket
+            z = (x - mu) / std
 
-        if trade_product == 'STRAWBERRIES':
-            etf_weight =  product_mids['STRAWBERRIES'] / (product_mids['GIFT_BASKET'] - 387 - 75 / 2)
-            component_weight = product_mids['STRAWBERRIES'] / component_basket
-            fv = component_weight - etf_weight - 0.000062
+            if z < z_score: # basket undervalued, buy
+                cond = 'buy'
+            elif z > z_score: # basket overvalued, sell
+                cond = 'sell'
+            else:
+                cond = 'do nth'
+            return cond, worst_bid_dict[trade_product], worst_ask_dict[trade_product]
 
-        if fv < 0: # basket undervalued, buy
-            cond = 'buy'
-        elif fv > 0: # basket overvalued, sell
-            cond = 'sell'
+        #######################################
+        ## ROSES & CHOCOLATE & STRAWBERRIES ##
+        ######################################
         else:
-            cond = 'do nth'
-        
-        return cond, worst_bid_dict['GIFT_BASKET'], worst_ask_dict['GIFT_BASKET']
-        
-    def BASKET_COMPONENTS_bs(
-        self,
-        pos: int,
-        order_depth: dict[int, int],
-        trade_product: str
-    ) -> str:
-        fv_threshold = 180 if trade_product == 'ROSES' else -28
-        trade_at = fv_threshold
-        close_at = fv_threshold * 0.5
-        product = ['ROSES', 'CHOCOLATE']
-        product_mids = {}
-        worst_bid_dict = {}
-        worst_ask_dict = {}
-        cond = 'do nth'
+            z_score = 1 if trade_product == 'ROSES' else -1 if trade_product == 'CHOCOLATE' else 0.68
+            trade_at = z_score
+            close_at = -z_score * 0.5
 
-        for prod in product:
-            best_ask, _ = list(order_depth[prod].sell_orders.items())[0]
-            best_bid, _ = list(order_depth[prod].buy_orders.items())[0]
-            worst_ask, _ = next(reversed(order_depth[prod].sell_orders.items()))
-            worst_bid, _ = next(reversed(order_depth[prod].buy_orders.items()))
-            mid_price = (best_bid + best_ask) / 2
-            product_mids[prod] = mid_price
-            worst_bid_dict[prod] = worst_bid
-            worst_ask_dict[prod] = worst_ask
+            if trade_product in ['ROSES', 'CHOCOLATE']:
+                mu, sigma = 6591.5498, 97.0719744256839
+                x = product_mids['ROSES'] - product_mids['CHOCOLATE']
+                z = (x - mu) / sigma
+            if trade_product == 'STRAWBERRIES':
+                mu, sigma = -3888.5099, 95.55717184540906
+                x = product_mids['STRAWBERRIES'] - product_mids['CHOCOLATE']
+                z = (x - mu) / sigma
+                # if not pairs, convergence trade
+                if z > -z_score or z < z_score:
+                    trade_at = mu
+                    close_at = mu * 0.5
+                    z = x                
 
-        if trade_product == 'ROSES':
-            fv = product_mids['ROSES'] - (1.8327 * product_mids['CHOCOLATE'] - product_mids['ROSES'] + 14500)
+            if z < -trade_at:
+                cond = 'buy'
+            elif z > trade_at:
+                cond = 'sell'
+            elif z > close_at and pos < 0:
+                cond = 'buy'
+            elif z < -close_at and pos > 0:
+                cond = 'sell'
+            else:
+                cond = 'do nth'
 
-        if trade_product == 'CHOCOLATE':
-            fv = product_mids['CHOCOLATE'] - 0.5456 * product_mids['ROSES']
-        
-        if fv < -trade_at:
-            cond = 'buy'
-        elif fv > trade_at:
-            cond = 'sell'
-        elif fv > close_at and pos < 0:
-            cond = 'buy'
-        elif fv < -close_at and pos > 0:
-            cond = 'sell'
-        else:
-            cond = 'do nth'
-
-        return cond, worst_bid_dict[trade_product], worst_ask_dict[trade_product], fv
+            return cond, worst_bid_dict[trade_product], worst_ask_dict[trade_product]
 
     def run(self, state: TradingState) -> tuple[dict[Symbol, list[Order]], int, str]:
 
@@ -407,28 +409,14 @@ class Trader:
                 buy_price, sell_price = ask, best_bid
             if cond == 'sell':
                 buy_price, sell_price = bid, best_ask
-            buy_amount, sell_amount = buy_amount + 2, sell_amount - 2
+            buy_amount, sell_amount = buy_amount, sell_amount
 
-          if product == 'CHOCOLATE':
-            cond, bid, ask, fv = self.BASKET_COMPONENTS_bs(curr_pos, state.order_depths, product)
-            if cond == 'buy':
-                buy_price, sell_price = best_ask, best_bid
-            if cond == 'sell':
-                buy_price, sell_price = best_bid, best_ask
-
-          if product == 'STRAWBERRIES':
+          if product in ['STRAWBERRIES', 'CHOCOLATE', 'ROSES']:
             cond, bid, ask = self.GIFT_BASKET_bs(curr_pos, state.order_depths, product)
             if cond == 'buy':
                 buy_price, sell_price = best_ask, best_bid
             if cond == 'sell':
                 buy_price, sell_price = best_bid, best_ask
-            
-          if product == 'ROSES':
-            cond, bid, ask, fv = self.BASKET_COMPONENTS_bs(curr_pos, state.order_depths, product)
-            if cond == 'buy':
-                buy_price, sell_price = ask, best_bid
-            if cond == 'sell':
-                buy_price, sell_price = bid, best_ask
             
           logger.print(product, 'current pos', curr_pos)
   
@@ -436,10 +424,12 @@ class Trader:
           if cond == 'buy':
             curr_buy_amount = math.ceil((buy_amount * weight) / 2)
             curr_sell_amount = -math.floor(buy_amount * (1 - weight)) if abs(-math.floor(buy_amount * (1 - weight)) + curr_pos ) <= pos_limit else 0
-            if product in ['CHOCOLATE', 'ROSES', 'STRAWBERRIES']:
+            if product in ['ROSES', 'STRAWBERRIES']:
                 trade_vol = pos_limit - curr_pos
                 if trade_vol > 0:
-                    orders.append(Order(product, buy_price, trade_vol)) # fill ask 
+                    orders.append(Order(product, buy_price, trade_vol))
+            elif product == 'CHOCOLATE':
+                orders.append(Order(product, buy_price, -best_ask_amount)) # fill ask 
             else:
                 orders.append(Order(product, buy_price, curr_buy_amount)) # fill ask
                 orders.append(Order(product, sell_price, curr_buy_amount)) # quote bid
@@ -450,10 +440,12 @@ class Trader:
             curr_sell_amount = -math.ceil((sell_amount * weight) / 2)
             curr_buy_amount = math.floor(sell_amount * (1 - weight)) if abs(math.floor(sell_amount * (1 - weight)) + curr_pos ) <= pos_limit else 0
 
-            if product in ['CHOCOLATE', 'ROSES', 'STRAWBERRIES']:
+            if product in ['ROSES', 'STRAWBERRIES']:
                 trade_vol = curr_pos + pos_limit
                 if trade_vol > 0:
-                    orders.append(Order(product, buy_price, -trade_vol)) # fill bid
+                    orders.append(Order(product, buy_price, -trade_vol))
+            elif product == 'CHOCOLATE':
+                orders.append(Order(product, buy_price, -best_bid_amount)) # fill bid
             else:
                 orders.append(Order(product, buy_price, curr_sell_amount)) # fill bid
                 orders.append(Order(product, buy_price, curr_buy_amount)) # quote bid
