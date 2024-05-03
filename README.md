@@ -31,21 +31,21 @@ Round 1 results were satisfactory, there were minimal improvements that could ha
 
 ## Round 2  - **[Submission Code](https://github.com/edmund870/2024-IMC-Global-Trading-Challenge/blob/main/Round%202/Round%202%20Submission.py)**, **[Results](https://jmerle.github.io/imc-prosperity-2-visualizer/?open=https://raw.githubusercontent.com/edmund870/2024-IMC-Global-Trading-Challenge/main/Round%202/Round%202%20Results.log)**
 
-**New Product Traded: `Orchids`**
+**New Product Traded: `ORCHIDS`**
 
-In round 2, `Orchids` were introduced. The strategy involved identifying arbitrage between two marketplaces: Archipelago and South. Factors for consideration included import/export tariffs, transportation costs, and storage costs. 
+In round 2, `ORCHIDS` were introduced. The strategy involved identifying arbitrage between two marketplaces: Archipelago and South. Factors for consideration included import/export tariffs, transportation costs, and storage costs. 
 
-When purchasing `Orchids` from the South, trades are executed at the ask, incurring transportation fees while receiving import tariffs. 
+When purchasing `ORCHIDS` from the South, trades are executed at the ask, incurring transportation fees while receiving import tariffs. 
 
 `south_buy_price = conv_ask + transport_fees + import_tariff`
 
-Conversely, when selling `Orchids` to the South, trades are executed at the bid, incurring transportation fees and export tariffs.
+Conversely, when selling `ORCHIDS` to the South, trades are executed at the bid, incurring transportation fees and export tariffs.
 
 `south_sell_price = conv_bid - transport_fees - export_tariff`
 
 Analysis revealed that going short at the Archipelago and immediately going flat by buying from the South was the most profitable. This was due to the receipt of the import tariffs, leading to profits. Going long is suboptimal due to the substantial export tariffs and the associated storage costs for holding the inventory. 
 
-Therefore, the strategy was to aggressively market make as close to the mid price of `Orchids` at the Archipelago as possible to establish a short position before immediately importing `Orchids` from the South to go flat in the subsequent timestamp. 
+Therefore, the strategy was to aggressively market make as close to the mid price of `ORCHIDS` at the Archipelago as possible to establish a short position before immediately importing `ORCHIDS` from the South to go flat in the subsequent timestamp. 
 
 A slight adjustment to Round 1's strategy was made, incorporating linear regression to predict the next mid price of `STARFRUIT`.
 
@@ -56,7 +56,7 @@ For the manual challenge, the concept tested was the use of FX arbitrage to maxi
 <img src="Round 2/Round 2 Results.png" alt="Round 2 Results" width="600"/>
 
 ### Post-Round Thoughts
-Round 2 results boosted rankings. Satisfactory results. It was said that humidity and sunlight affected `ORCHIRDS`, however, I was unable to determine how the product was affected. 
+Round 2 results boosted rankings. Satisfactory results. It was said that humidity and sunlight affected `ORCHIDS`, however, I was unable to determine how the product was affected. 
 
 ## Round 3 - **[Submission Code](https://github.com/edmund870/2024-IMC-Global-Trading-Challenge/blob/main/Round%203/Round%203%20Submission.py)**, **[Results](https://jmerle.github.io/imc-prosperity-2-visualizer/?open=https://raw.githubusercontent.com/edmund870/2024-IMC-Global-Trading-Challenge/main/Round%203/Round%203%20Results.log)**
 **New Products Traded: `GIFT_BASKET`, `CHOCOLATE`, `STRAWBERRIES`, `ROSES`**
@@ -88,11 +88,11 @@ The trading strategy for this round entailed purchasing `COCONUT_COUPON` if the 
 
 Although the IV was computed at T<sub>0</sub>, to avoid hardcoding parameters and a repeat of Round 3, IV was computed using Newton-Raphson method and cached for each iteration. The mean IV across a time period of 200 iterations was used to compute the call price.
 
-Delta hedging was also employed to hedge against unfavorable movements in the option price. Delta of `COCONUT_COUPON` was computed and positions in `COCONUT` were adjusted accordingly: long if `COCONUT COUPON` was short, and vice versa.
+Delta hedging was also employed to hedge against unfavorable movements in the option price. Delta of `COCONUT_COUPON` was computed and positions in `COCONUT` were adjusted accordingly: long if `COCONUT_COUPON` was short, and vice versa.
 
 Refinements were also made to Round 3 strategy, incorporating rolling means of the premium / spread for the respective products. 
 
-It was noticed that the function for humidity is a smoothed graph and `ORCHID` prices moved in the same direction as humidity. A condition, identifying the max/min point of humidity was introduced to determine the trade of `ORCHID`.
+It was noticed that the function for humidity is a smoothed graph and `ORCHIDS` prices moved in the same direction as humidity. A condition, identifying the max/min point of humidity was introduced to determine the trade of `ORCHIDS`.
 
 **Round 4 Results: 280 / 9,140** 
 
