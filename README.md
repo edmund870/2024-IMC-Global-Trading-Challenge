@@ -1,6 +1,10 @@
 #  2024 IMC Global Trading Challenge
 **Final Rank: 332 / 9,140 Teams**
 
+<img src="Final Results Leaderboard.png" alt="Final Results Leaderboard" width="300"/>
+<img src="Final Results.png" alt="Final Results" width="360"/>
+
+\
 Over 15 days, I participated in Prosperity 2, an algorithmic trading challenge hosted by IMC Trading. Participants had 72 hours for each of the  5 rounds to code a trading strategy for each round. Each round presented a distinct set of products, necessitating different trading strategies.
 
 - [Round 1](#round-1) - Market Making
