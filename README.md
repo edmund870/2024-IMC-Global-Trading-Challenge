@@ -1,7 +1,6 @@
 #  2024 IMC Global Trading Challenge
 **Final Rank: 332 / 9,140 Teams**
 
-<img src="Final Results Leaderboard.png" alt="Final Results Leaderboard" width="300"/>
 <img src="Final Results.png" alt="Final Results" width="360"/>
 
 \
